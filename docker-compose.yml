@@ -1,0 +1,23 @@
+version: "3.7"
+services:
+  front:
+    image: resnal-frontend
+    container_name: resnal-frontend
+    networks:
+      - resnal
+  back:
+    image: resnal-backend
+    volumes: 
+      - ./Backend:/app
+  loadbal:
+    image: resnal-loadbal
+    networks: 
+      - resnal
+    volumes: 
+      - ./Backend/resnal.sock:/app/resnal.sock
+    ports: 
+      - 80:80
+    depends_on: 
+      - "back"
+networks: 
+  resnal:

@@ -1,0 +1,14 @@
+version: "3.7"
+services:
+
+  front:
+    image: rottiakash/resnal-angular-base:v3
+    ports:
+      - "443:80"
+      - "80:80"
+  back:
+    image: rottiakash/resnal:v2
+    volumes:
+      - ./:/app
+    ports:
+        - "1216:80"
