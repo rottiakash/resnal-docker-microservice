@@ -1,16 +1,16 @@
 version: "3.7"
 services:
   front:
-    image: resnal-frontend
+    image: rottiakash/resnal-frontend
     container_name: resnal-frontend
     networks:
       - resnal
   back:
-    image: resnal-backend
+    image: rottiakash/resnal-backend
     volumes: 
       - ./Backend:/app
   loadbal:
-    image: resnal-loadbal
+    image: rottiakash/resnal-loadbal
     networks: 
       - resnal
     volumes: 
