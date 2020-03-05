@@ -1,6 +1,6 @@
 from resanal.models import Fetch,Result
 
-for  i in Fetch.objects.filter(usn__batch="2016",usn__sem=7):
+for  i in Fetch.objects.filter(usn__batch="2017",usn__sem=5):
     if i.totalmarks >= 90:
         i.grade = 10
     elif 80 <= i.totalmarks <= 89:

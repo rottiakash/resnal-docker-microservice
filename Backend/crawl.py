@@ -87,7 +87,7 @@ def getResult(USN):
         print("IP BLOCKED...CHECK PROXY...PRESS ANY KEY TO CONTINUE")
         input()
         getResult(USN)
-    elif "Semester : 7" in res.text:
+    elif "Semester : 5" in res.text:
         soup = BeautifulSoup(res.content, 'html.parser')
         result = [soup.find_all('td')[3].text.lstrip(' : ')]
         table = soup.find_all('div',attrs={'class':'divTable'})[0]
@@ -110,7 +110,7 @@ def getResult(USN):
         return(getResult(USN))
 
 # Django Part
-book = xlrd.open_workbook('1BI16CS.xlsx')
+book = xlrd.open_workbook('1BI17CS.xlsx')
 first_sheet = book.sheet_by_index(0)
 i = 1
 while True:
@@ -128,9 +128,9 @@ while True:
         print(result.name)
         res = res[1:]
         result.usn = USN
-        result.sem = 7
+        result.sem = 5
         result.section = first_sheet.cell_value(i,1)
-        result.batch = 2016
+        result.batch = 2017
         result.save()
         for r in res:
             fetch = Fetch()
