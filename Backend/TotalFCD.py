@@ -1,7 +1,7 @@
 from resanal.models import Result, Fetch
 
 k = 1
-for i in Result.objects.filter(batch="2018",sem=2):
+for i in Result.objects.filter(batch="2016",sem=7):
     total = 0
     for j in i.maping.all():
         total += j.totalmarks
