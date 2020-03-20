@@ -85,16 +85,18 @@ def getResult(USN, sem):
     if 'Invalid captcha code !!!' in res.text:
         print("Invalid Captcha, getting new session")
         getNewSession()
-        return(getResult(USN))
+        return(getResult(USN, sem))
     elif "Redirecting to VTU Results Site" in res.text:
         getNewSession()
-        return(getResult(USN))
+        return(getResult(USN, sem))
     elif "University Seat Number is not available or Invalid..!" in res.text:
+        return 404
+    elif "Invalid USN Format.." in res.text:
         return 404
     elif "Please check website after 4 hour --- !!!" in res.text:
         print("IP BLOCKED...CHECK PROXY...PRESS ANY KEY TO CONTINUE")
         input()
-        getResult(USN)
+        getResult(USN, sem)
     elif "Semester : %d" % (sem) in res.text:
         soup = BeautifulSoup(res.content, 'html.parser')
         result = [soup.find_all('td')[3].text.lstrip(' : ')]
@@ -110,57 +112,18 @@ def getResult(USN, sem):
             sub['total'] = cells[4].text
             sub['result'] = cells[5].text
             result.append(sub)
+        print(result)
         return result
     elif "Semester" in res.text:
         return 404
     else:
         getNewSession()
-        return(getResult(USN))
-
-
-# Django Part
-students = Data.objects.filter(done=False)
-for student in students:
-    USN = student.usn
-    print("USN:-"+first_sheet.cell_value(i, 0))
-    res = getResult(USN, student.sem)
-    if(res == 404):
-        print("USN Invalid")
-        continue
-    else:
-        result = Result()
-        result.name = res[0]
-        print(result.name)
-        res = res[1:]
-        result.usn = USN
-        result.sem = student.sem
-        result.section = student.section
-        result.batch = student.batch
-        try:
-            result.save()
-            student.done = True
-            student.save()
-            for r in res:
-                fetch = Fetch()
-                fetch.usn = result
-                fetch.subcode = r['subcode']
-                fetch.subname = r['subname']
-                fetch.intmarks = r['ia']
-                fetch.extmarks = r['ea']
-                fetch.totalmarks = r['total']
-                fetch.save()
-            grade(USN, student.batch, student.sem)
-            totalFCD(USN, student.batch, student.sem)
-        except:
-            print("Student Data Already Exists")
-            student.done = True
-            student.save()
-print("Done")
-
+        return(getResult(USN, sem))
 
 # Helper Methods
 
-def grade(USN, batch, sem):
+
+def getGrade(USN, batch, sem):
     for i in Fetch.objects.filter(usn__batch=batch, usn__sem=sem, usn__usn=USN):
         if i.totalmarks >= 90:
             i.grade = 10
@@ -216,17 +179,17 @@ def FCD(USN, batch, sem):
 
 def GPA(USN, batch, sem):
     for i in Result.objects.filter(batch=batch, sem=sem, usn=USN):
-    totalgrade = 0
-    totalCredit = 0
-    gpa = 0
-    roundoff = 0
-    for j in i.maping.all():
-        totalgrade += j.grade * getCredit(j.subcode)
-        totalCredit += 10*getCredit(j.subcode)
-    gpa = (totalgrade/totalCredit)*10
-    roundoff = round(gpa, 2)
-    i.gpa = roundoff
-    i.save()
+        totalgrade = 0
+        totalCredit = 0
+        gpa = 0
+        roundoff = 0
+        for j in i.maping.all():
+            totalgrade += j.grade * getCredit(j.subcode)
+            totalCredit += 10*getCredit(j.subcode)
+        gpa = (totalgrade/totalCredit)*10
+        roundoff = round(gpa, 2)
+        i.gpa = roundoff
+        i.save()
 
 
 def getCredit(subcode):
@@ -242,3 +205,46 @@ def getCredit(subcode):
         return 3
     elif re.search("^..MATDIP[0-9][0-9]$", subcode) is not None:  # MATDIP
         return 0
+
+
+# Django Part
+students = Data.objects.filter(done=False)
+for student in students:
+    USN = student.usn
+    print("USN:-"+USN)
+    result = Result()
+    result.usn = USN
+    result.sem = student.sem
+    result.section = student.section
+    result.batch = student.batch
+    try:
+        result.save()
+    except:
+        print("Student Data Already Exists")
+        student.done = True
+        student.save()
+        continue
+    res = getResult(USN, student.sem)
+    if(res == 404):
+        print("USN Invalid")
+        result.delete()
+        continue
+    else:
+        result.name = res[0]
+        print(result.name)
+        res = res[1:]
+        result.save()
+        for r in res:
+            fetch = Fetch()
+            fetch.usn = result
+            fetch.subcode = r['subcode']
+            fetch.subname = r['subname']
+            fetch.intmarks = r['ia']
+            fetch.extmarks = r['ea']
+            fetch.totalmarks = r['total']
+            fetch.save()
+        getGrade(USN, student.batch, student.sem)
+        totalFCD(USN, student.batch, student.sem)
+        GPA(USN, student.batch, student.sem)
+print("Done")
+
