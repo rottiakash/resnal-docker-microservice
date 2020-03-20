@@ -1,10 +1,11 @@
 import cv2
 import numpy as np
 import pytesseract
-from resanal.models import Fetch, Result
+from resanal.models import Fetch, Result, Data
 import xlrd
 import requests
 from lxml import html
+import re
 from bs4 import BeautifulSoup
 import urllib3
 
@@ -76,7 +77,7 @@ def getNewSession():
         Image.open("mask.png"))
 
 
-def getResult(USN):
+def getResult(USN, sem):
     post_payload['lns'] = USN
     url = "https://results.vtu.ac.in/_CBCS/resultpage.php"
     res = requests.request("POST", url, headers=post_headers,
@@ -94,7 +95,7 @@ def getResult(USN):
         print("IP BLOCKED...CHECK PROXY...PRESS ANY KEY TO CONTINUE")
         input()
         getResult(USN)
-    elif "Semester : 5" in res.text:
+    elif "Semester : %d" % (sem) in res.text:
         soup = BeautifulSoup(res.content, 'html.parser')
         result = [soup.find_all('td')[3].text.lstrip(' : ')]
         table = soup.find_all('div', attrs={'class': 'divTable'})[0]
@@ -118,29 +119,27 @@ def getResult(USN):
 
 
 # Django Part
-book = xlrd.open_workbook('1BI18CS.xlsx')
-first_sheet = book.sheet_by_index(0)
-i = 1
-while True:
-    if first_sheet.cell_value(i, 0) == "end":
-        break
-    USN = first_sheet.cell_value(i, 0)
+students = Data.objects.filter(done=False)
+for student in students:
+    USN = student.usn
     print("USN:-"+first_sheet.cell_value(i, 0))
-    res = getResult(USN)
+    res = getResult(USN, student.sem)
     if(res == 404):
         print("USN Invalid")
-        i += 1
+        continue
     else:
         result = Result()
         result.name = res[0]
         print(result.name)
         res = res[1:]
         result.usn = USN
-        result.sem = 5
-        result.section = first_sheet.cell_value(i, 1)
-        result.batch = 2017
+        result.sem = student.sem
+        result.section = student.section
+        result.batch = student.batch
         try:
             result.save()
+            student.done = True
+            student.save()
             for r in res:
                 fetch = Fetch()
                 fetch.usn = result
@@ -150,7 +149,96 @@ while True:
                 fetch.extmarks = r['ea']
                 fetch.totalmarks = r['total']
                 fetch.save()
+            grade(USN, student.batch, student.sem)
+            totalFCD(USN, student.batch, student.sem)
         except:
             print("Student Data Already Exists")
-        i += 1
+            student.done = True
+            student.save()
 print("Done")
+
+
+# Helper Methods
+
+def grade(USN, batch, sem):
+    for i in Fetch.objects.filter(usn__batch=batch, usn__sem=sem, usn__usn=USN):
+        if i.totalmarks >= 90:
+            i.grade = 10
+        elif 80 <= i.totalmarks <= 89:
+            i.grade = 9
+        elif 70 <= i.totalmarks <= 79:
+            i.grade = 8
+        elif 60 <= i.totalmarks <= 69:
+            i.grade = 7
+        elif 50 <= i.totalmarks <= 59:
+            i.grade = 6
+        elif 45 <= i.totalmarks <= 49:
+            i.grade = 5
+        elif 40 <= i.totalmarks <= 44:
+            i.grade = 4
+        elif i.totalmarks < 40:
+            i.grade = 0
+        i.save()
+
+
+def totalFCD(USN, batch, sem):
+    for i in Result.objects.filter(batch=batch, sem=sem, usn=USN):
+        total = 0
+        for j in i.maping.all():
+            total += j.totalmarks
+        if total >= 560:
+            FCD = "FCD"
+        elif 480 <= total <= 559:
+            FCD = "FC"
+        elif 400 <= total <= 499:
+            FCD = "SC"
+        else:
+            FCD = "P"
+        i.totalFCD = FCD
+        i.save()
+
+
+def FCD(USN, batch, sem):
+    for i in Fetch.objects.filter(usn__batch=batch, usn__sem=sem, usn__usn=USN):
+        if 70 <= i.totalmarks <= 100:
+            FCD = "FCD"
+        elif 60 <= i.totalmarks <= 69:
+            FCD = "FC"
+        elif 50 <= i.totalmarks <= 59:
+            FCD = "SC"
+        elif 40 <= i.totalmarks <= 49:
+            FCD = "P"
+        else:
+            FCD = "F"
+        i.FCD = FCD
+        i.save()
+
+
+def GPA(USN, batch, sem):
+    for i in Result.objects.filter(batch=batch, sem=sem, usn=USN):
+    totalgrade = 0
+    totalCredit = 0
+    gpa = 0
+    roundoff = 0
+    for j in i.maping.all():
+        totalgrade += j.grade * getCredit(j.subcode)
+        totalCredit += 10*getCredit(j.subcode)
+    gpa = (totalgrade/totalCredit)*10
+    roundoff = round(gpa, 2)
+    i.gpa = roundoff
+    i.save()
+
+
+def getCredit(subcode):
+    if subcode == "18CS32":
+        return 4
+    elif re.search("^..[A-Z][A-Z][A-Z]?(L|P)[0-9][0-9]$", subcode) is not None:  # Lab
+        return 2
+    elif re.search("^18[A-Z][A-Z][A-Z]?[0-9][0-9]$", subcode) is not None:  # Subject
+        return 3
+    elif re.search("^(15|16|17)[A-Z][A-Z][A-Z]?[0-9][0-9]$", subcode) is not None:  # Subject
+        return 4
+    elif re.search("^..[A-Z][A-Z][A-Z]?[0-9][0-9][0-9]$", subcode) is not None:  # Elective
+        return 3
+    elif re.search("^..MATDIP[0-9][0-9]$", subcode) is not None:  # MATDIP
+        return 0
