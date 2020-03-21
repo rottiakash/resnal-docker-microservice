@@ -244,6 +244,7 @@ for student in students:
             fetch.totalmarks = r['total']
             fetch.save()
         getGrade(USN, student.batch, student.sem)
+        FCD(USN, student.batch, student.sem)
         totalFCD(USN, student.batch, student.sem)
         GPA(USN, student.batch, student.sem)
 print("Done")
