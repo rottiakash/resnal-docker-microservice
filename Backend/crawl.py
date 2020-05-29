@@ -247,5 +247,6 @@ for student in students:
         FCD(USN, student.batch, student.sem)
         totalFCD(USN, student.batch, student.sem)
         GPA(USN, student.batch, student.sem)
+        student.done = True
+        student.save()
 print("Done")
-
