@@ -565,6 +565,102 @@ class getAllXL(APIView):
         pass
 
 
+class getAllXLSec(APIView):
+    def get(self, request):
+        batch = self.request.query_params.get("batch")
+        sem = self.request.query_params.get("sem")
+        sec = self.request.query_params.get("sec")
+        results = Result.objects.filter(batch=batch, sem=sem,section=sec).order_by("usn")
+        workbook = xlsxwriter.Workbook("Export.xlsx")
+        worksheet = workbook.add_worksheet()
+        heading = workbook.add_format({"bold": True, "border": 1})
+        worksheet.write(0, 0, "Student Name", heading)
+        merge_format = workbook.add_format(
+            {"align": "center", "bold": True, "border": 1}
+        )
+        worksheet.write(0, 1, "Student USN", heading)
+        worksheet.write(0, 2, "Section", heading)
+        subs = set()
+        for i in results:
+            for j in i.maping.all():
+                subs.add(j.subcode)
+        subs = sorted(subs)
+        j = 3
+        for i in subs:
+            worksheet.merge_range(0, j, 0, j + 3, i, merge_format)
+            worksheet.write(1, j, "Internal Marks", heading)
+            j = j + 1
+            worksheet.write(1, j, "External Marks", heading)
+            j = j + 1
+            worksheet.write(1, j, "Total Marks", heading)
+            j = j + 1
+            worksheet.write(1, j, "Class", heading)
+            j = j + 1
+
+        worksheet.write(0, j, "GPA", heading)
+        border_format = workbook.add_format({"border": 1})
+        border_format_fcd_green = workbook.add_format(
+            {"align": "center", "border": 1, "bg_color": "green"}
+        )
+        border_format_fcd_blue = workbook.add_format(
+            {"align": "center", "border": 1, "bg_color": "blue"}
+        )
+        border_format_fcd_yellow = workbook.add_format(
+            {"align": "center", "border": 1, "bg_color": "yellow"}
+        )
+        border_format_fcd_purple = workbook.add_format(
+            {"align": "center", "border": 1, "bg_color": "purple"}
+        )
+        border_format_fcd_red = workbook.add_format(
+            {"align": "center", "border": 1, "bg_color": "red"}
+        )
+        row = 2
+        col = 3
+        for i in results:
+            worksheet.write(row, 0, i.name, border_format)
+            worksheet.write(row, 1, i.usn, border_format)
+            worksheet.write(row, 2, i.section, border_format)
+            for j in subs:
+                isub = Fetch.objects.filter(subcode=j, usn__batch=batch, usn__usn=i.usn)
+                if len(isub) == 1:
+                    isub = isub[0]
+                    if isub.FCD == "FCD":
+                        fcd_format = border_format_fcd_green
+                    elif isub.FCD == "FC":
+                        fcd_format = border_format_fcd_blue
+                    elif isub.FCD == "SC":
+                        fcd_format = border_format_fcd_yellow
+                    elif isub.FCD == "P":
+                        fcd_format = border_format_fcd_purple
+                    elif isub.FCD == "F":
+                        fcd_format = border_format_fcd_red
+                    worksheet.write(row, col, isub.intmarks, border_format)
+                    worksheet.write(row, col + 1, isub.extmarks, border_format)
+                    worksheet.write(row, col + 2, isub.totalmarks, border_format)
+                    worksheet.write(row, col + 3, isub.FCD, fcd_format)
+                    col = col + 4
+                else:
+                    worksheet.write(row, col, "-", border_format)
+                    worksheet.write(row, col + 1, "-", border_format)
+                    worksheet.write(row, col + 2, "-", border_format)
+                    worksheet.write(row, col + 3, "-", border_format)
+                    col = col + 4
+            worksheet.write(row, col, i.gpa, border_format)
+            row = row + 1
+            col = 3
+        workbook.close()
+        with open("/app/Export.xlsx", "rb") as fh:
+            response = HttpResponse(fh.read(), content_type="application/vnd.ms-excel")
+            response["Content-Disposition"] = "inline; filename=" + os.path.basename(
+                "/app/Export.xlsx"
+            )
+            return response
+
+    def post(self, request):
+        pass
+
+
+
 class Wake(APIView):
     def get(self, request):
         return HttpResponse(status=200)
