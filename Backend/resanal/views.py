@@ -246,7 +246,12 @@ class TotalFCD(APIView):
     def get(self, request):
         batch = self.request.query_params.get("batch")
         semester = self.request.query_params.get("sem")
+        back = self.request.query_params.get("back")
         results = Result.objects.filter(batch=batch, sem=semester).order_by("-gpa")
+        batch2 = int(batch[2:])
+        if(back == "true"):
+            results = list(results)
+            results = list(filter(lambda x: ((int(x.usn[3:5])<batch2) or (int(x.usn[3:5])<=batch2 and int(x.usn[7:])>=400 )),results))
         if len(results) == 0:
             return HttpResponse(status=204)
         serializer = TotalFCDSerializer(results, many=True)
@@ -258,9 +263,14 @@ class TotalFCDSection(APIView):
         batch = self.request.query_params.get("batch")
         semester = self.request.query_params.get("sem")
         section = self.request.query_params.get("sec")
+        back = self.request.query_params.get("back")
         results = Result.objects.filter(
             batch=batch, sem=semester, section=section
         ).order_by("-gpa")
+        batch2 = int(batch[2:])
+        if(back == "true"):
+            results = list(results)
+            results = list(filter(lambda x: ((int(x.usn[3:5])<batch2) or (int(x.usn[3:5])<=batch2 and int(x.usn[7:])>=400 )),results))
         if len(results) == 0:
             return HttpResponse(status=204)
         serializer = TotalFCDSerializer(results, many=True)
@@ -372,9 +382,14 @@ class genXLDash(APIView):
         cP = 0
         batch = self.request.query_params.get("batch")
         sem = self.request.query_params.get("sem")
+        back = self.request.query_params.get("back")
         passCount = self.request.query_params.get("pc")
         failCount = self.request.query_params.get("fc")
         results = Result.objects.filter(batch=batch, sem=sem).order_by("-gpa")
+        batch2 = int(batch[2:])
+        if(back == "true"):
+            results = list(results)
+            results = list(filter(lambda x: ((int(x.usn[3:5])<batch2) or (int(x.usn[3:5])<=batch2 and int(x.usn[7:])>=400 )),results))
         workbook = xlsxwriter.Workbook("Export.xlsx")
         worksheet = workbook.add_worksheet()
         heading = workbook.add_format({"bold": True, "border": 1})
@@ -480,9 +495,14 @@ class genXLDashSec(APIView):
         batch = self.request.query_params.get("batch")
         sem = self.request.query_params.get("sem")
         sec = self.request.query_params.get("sec")
+        back = self.request.query_params.get("back")
         passCount = self.request.query_params.get("pc")
         failCount = self.request.query_params.get("fc")
         results = Result.objects.filter(batch=batch, sem=sem,section=sec).order_by("-gpa")
+        batch2 = int(batch[2:])
+        if(back == "true"):
+            results = list(results)
+            results = list(filter(lambda x: ((int(x.usn[3:5])<batch2) or (int(x.usn[3:5])<=batch2 and int(x.usn[7:])>=400 )),results))
         workbook = xlsxwriter.Workbook("Export.xlsx")
         worksheet = workbook.add_worksheet()
         heading = workbook.add_format({"bold": True, "border": 1})
@@ -583,7 +603,12 @@ class getAllXL(APIView):
     def get(self, request):
         batch = self.request.query_params.get("batch")
         sem = self.request.query_params.get("sem")
+        back = self.request.query_params.get("back")
         results = Result.objects.filter(batch=batch, sem=sem).order_by("usn")
+        batch2 = int(batch[2:])
+        if(back == "true"):
+            results = list(results)
+            results = list(filter(lambda x: ((int(x.usn[3:5])<batch2) or (int(x.usn[3:5])<=batch2 and int(x.usn[7:])>=400 )),results))
         workbook = xlsxwriter.Workbook("Export.xlsx")
         worksheet = workbook.add_worksheet()
         heading = workbook.add_format({"bold": True, "border": 1})
@@ -678,7 +703,12 @@ class getAllXLSec(APIView):
         batch = self.request.query_params.get("batch")
         sem = self.request.query_params.get("sem")
         sec = self.request.query_params.get("sec")
+        back = self.request.query_params.get("back")
         results = Result.objects.filter(batch=batch, sem=sem,section=sec).order_by("usn")
+        batch2 = int(batch[2:])
+        if(back == "true"):
+            results = list(results)
+            results = list(filter(lambda x: ((int(x.usn[3:5])<batch2) or (int(x.usn[3:5])<=batch2 and int(x.usn[7:])>=400 )),results))
         workbook = xlsxwriter.Workbook("Export.xlsx")
         worksheet = workbook.add_worksheet()
         heading = workbook.add_format({"bold": True, "border": 1})
