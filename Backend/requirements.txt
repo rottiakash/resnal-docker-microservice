@@ -3,7 +3,7 @@ backports.csv==1.0.7
 beautifulsoup4==4.8.0
 bs4==0.0.1
 captcha-solver==0.1.5
-certifi==2019.6.16
+certifi==2022.12.7
 chardet==3.0.4
 colorama==0.4.1
 defusedxml==0.6.0
